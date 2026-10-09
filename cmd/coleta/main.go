@@ -12,6 +12,8 @@ import (
 
 	"github.com/arturmj10/monitor-gastos-parlamentares/internal/coleta/config"
 	"github.com/arturmj10/monitor-gastos-parlamentares/internal/coleta/httpapi"
+	"github.com/arturmj10/monitor-gastos-parlamentares/internal/coleta/repository"
+	"github.com/arturmj10/monitor-gastos-parlamentares/internal/coleta/storage"
 )
 
 func main() {
@@ -25,14 +27,27 @@ func main() {
 
 	logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: cfg.SlogLevel()}))
 
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	db, err := storage.Abrir(ctx, cfg.DatabaseURL)
+	if err != nil {
+		logger.Error("falha ao conectar no banco", "erro", err)
+		os.Exit(1)
+	}
+
+	repo := repository.NovoGorm(db)
+	if err := repo.Migrar(); err != nil {
+		logger.Error("falha ao migrar o banco", "erro", err)
+		os.Exit(1)
+	}
+	logger.Info("banco conectado e migrado")
+
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
 		Handler:           httpapi.NewRouter(logger),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
 
 	go func() {
 		logger.Info("servidor iniciado", "porta", cfg.Port)

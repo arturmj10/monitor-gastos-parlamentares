@@ -8,20 +8,26 @@ import (
 )
 
 type Config struct {
-	Port     string
-	LogLevel string
+	Port        string
+	LogLevel    string
+	DatabaseURL string
 }
 
 func Load() (Config, error) {
 	cfg := Config{
-		Port:     getenv("PORT", "8080"),
-		LogLevel: getenv("LOG_LEVEL", "info"),
+		Port:        getenv("PORT", "8080"),
+		LogLevel:    getenv("LOG_LEVEL", "info"),
+		DatabaseURL: os.Getenv("DATABASE_URL"),
 	}
 
 	switch strings.ToLower(cfg.LogLevel) {
 	case "debug", "info", "warn", "error":
 	default:
 		return Config{}, fmt.Errorf("LOG_LEVEL invalido: %q", cfg.LogLevel)
+	}
+
+	if cfg.DatabaseURL == "" {
+		return Config{}, fmt.Errorf("DATABASE_URL e obrigatoria")
 	}
 
 	return cfg, nil
