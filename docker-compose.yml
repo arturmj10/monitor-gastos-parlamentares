@@ -16,5 +16,20 @@ services:
       timeout: 3s
       retries: 10
 
+  coleta:
+    build: .
+    container_name: coleta-service
+    environment:
+      PORT: "8080"
+      LOG_LEVEL: info
+      DATABASE_URL: postgres://coleta:coleta@postgres:5432/coleta?sslmode=disable
+      CAMARA_BASE_URL: https://dadosabertos.camara.leg.br/api/v2
+      CAMARA_TIMEOUT: 10s
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   postgres_data:
