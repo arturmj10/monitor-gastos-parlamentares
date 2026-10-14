@@ -102,6 +102,26 @@ func (r *GormRepository) SalvarDespesas(ctx context.Context, deputadoID int64, d
 	})
 }
 
+// LimparDespesasDoAno remove todas as despesas de um ano (antes de reimportar
+// o arquivo do CEAP), tornando a importação idempotente.
+func (r *GormRepository) LimparDespesasDoAno(ctx context.Context, ano int) error {
+	if err := r.db.WithContext(ctx).Where("ano = ?", ano).Delete(&deputado.Despesa{}).Error; err != nil {
+		return fmt.Errorf("limpar despesas do ano: %w", err)
+	}
+	return nil
+}
+
+// InserirLoteDespesas insere um lote de despesas em batches.
+func (r *GormRepository) InserirLoteDespesas(ctx context.Context, despesas []deputado.Despesa) error {
+	if len(despesas) == 0 {
+		return nil
+	}
+	if err := r.db.WithContext(ctx).CreateInBatches(despesas, 500).Error; err != nil {
+		return fmt.Errorf("inserir lote de despesas: %w", err)
+	}
+	return nil
+}
+
 // ListarDespesas retorna as despesas de um deputado, filtrando por ano se ano > 0.
 func (r *GormRepository) ListarDespesas(ctx context.Context, deputadoID int64, ano int) ([]deputado.Despesa, error) {
 	q := r.db.WithContext(ctx).Where("deputado_id = ?", deputadoID)

@@ -71,6 +71,14 @@ func (m *mockRepo) ListarDespesas(ctx context.Context, id int64, ano int) ([]dep
 	return desp, args.Error(1)
 }
 
+func (m *mockRepo) LimparDespesasDoAno(ctx context.Context, ano int) error {
+	return m.Called(ctx, ano).Error(0)
+}
+
+func (m *mockRepo) InserirLoteDespesas(ctx context.Context, despesas []deputado.Despesa) error {
+	return m.Called(ctx, despesas).Error(0)
+}
+
 // --- testes ---
 
 func TestSincronizarDeputados(t *testing.T) {

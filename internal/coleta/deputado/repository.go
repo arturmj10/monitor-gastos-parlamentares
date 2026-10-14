@@ -11,4 +11,8 @@ type Repository interface {
 	Buscar(ctx context.Context, id int64) (Deputado, error)
 	SalvarDespesas(ctx context.Context, deputadoID int64, despesas []Despesa) error
 	ListarDespesas(ctx context.Context, deputadoID int64, ano int) ([]Despesa, error)
+
+	// carga em lote das despesas do CEAP (arquivo anual)
+	LimparDespesasDoAno(ctx context.Context, ano int) error
+	InserirLoteDespesas(ctx context.Context, despesas []Despesa) error
 }
