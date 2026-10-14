@@ -16,15 +16,19 @@ import (
 )
 
 type servicoFake struct {
-	deputado  deputado.Deputado
-	lista     []deputado.Deputado
-	despesas  []deputado.Despesa
-	sincroniz int
-	err       error
+	deputado   deputado.Deputado
+	lista      []deputado.Deputado
+	despesas   []deputado.Despesa
+	sincroniz  int
+	importadas int
+	err        error
 }
 
 func (s *servicoFake) SincronizarDeputados(context.Context) (int, error) {
 	return s.sincroniz, s.err
+}
+func (s *servicoFake) SincronizarDespesas(context.Context, int) (int, error) {
+	return s.importadas, s.err
 }
 func (s *servicoFake) ListarDeputados(context.Context, deputado.Filtro) ([]deputado.Deputado, error) {
 	return s.lista, s.err
@@ -100,4 +104,18 @@ func TestDespesas_502ApiIndisponivel(t *testing.T) {
 	h := novoServer(&servicoFake{err: camara.ErrIndisponivel})
 	rec := get(h, "/deputados/7/despesas?ano=2024")
 	assert.Equal(t, http.StatusBadGateway, rec.Code)
+}
+
+func TestSincronizarDespesas_200(t *testing.T) {
+	h := novoServer(&servicoFake{importadas: 1000})
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/despesas/sync?ano=2024", nil))
+	assert.Equal(t, http.StatusOK, rec.Code)
+}
+
+func TestSincronizarDespesas_400SemAno(t *testing.T) {
+	h := novoServer(&servicoFake{})
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/despesas/sync", nil))
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
 }

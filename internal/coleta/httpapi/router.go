@@ -28,6 +28,8 @@ func NewRouter(logger *slog.Logger, h *Handler) http.Handler {
 		r.Get("/{id}/despesas", h.despesas)
 	})
 
+	r.Post("/despesas/sync", h.sincronizarDespesas)
+
 	return r
 }
 

@@ -17,6 +17,7 @@ type Servico interface {
 	SincronizarDeputados(ctx context.Context) (int, error)
 	ListarDeputados(ctx context.Context, filtro deputado.Filtro) ([]deputado.Deputado, error)
 	BuscarDeputado(ctx context.Context, id int64) (deputado.Deputado, error)
+	SincronizarDespesas(ctx context.Context, ano int) (int, error)
 	ObterDespesas(ctx context.Context, id int64, ano int) ([]deputado.Despesa, error)
 }
 
@@ -63,6 +64,20 @@ func (h *Handler) buscar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	escreverJSON(w, http.StatusOK, toDeputadoResp(d))
+}
+
+func (h *Handler) sincronizarDespesas(w http.ResponseWriter, r *http.Request) {
+	ano, err := strconv.Atoi(r.URL.Query().Get("ano"))
+	if err != nil || ano <= 0 {
+		h.erro(w, deputado.ErrParametroInvalido)
+		return
+	}
+	n, err := h.svc.SincronizarDespesas(r.Context(), ano)
+	if err != nil {
+		h.erro(w, err)
+		return
+	}
+	escreverJSON(w, http.StatusOK, map[string]int{"ano": ano, "importadas": n})
 }
 
 func (h *Handler) despesas(w http.ResponseWriter, r *http.Request) {
