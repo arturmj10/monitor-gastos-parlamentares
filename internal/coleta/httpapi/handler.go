@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/arturmj10/monitor-gastos-parlamentares/internal/coleta/camara"
+	"github.com/arturmj10/monitor-gastos-parlamentares/internal/coleta/ceap"
 	"github.com/arturmj10/monitor-gastos-parlamentares/internal/coleta/deputado"
 	"github.com/go-chi/chi/v5"
 )
@@ -111,6 +112,9 @@ func (h *Handler) erro(w http.ResponseWriter, err error) {
 		escreverErro(w, http.StatusNotFound, "deputado nao encontrado")
 	case errors.Is(err, camara.ErrIndisponivel):
 		h.logger.Error("api da camara indisponivel", "erro", err.Error())
+		escreverErro(w, http.StatusBadGateway, "servico externo indisponivel")
+	case errors.Is(err, ceap.ErrIndisponivel):
+		h.logger.Error("arquivo do ceap indisponivel", "erro", err.Error())
 		escreverErro(w, http.StatusBadGateway, "servico externo indisponivel")
 	default:
 		h.logger.Error("erro interno", "erro", err.Error())
