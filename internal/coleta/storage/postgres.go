@@ -16,7 +16,7 @@ func Abrir(ctx context.Context, dsn string) (*gorm.DB, error) {
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
 		// silencia o logger próprio do GORM; a observabilidade do serviço é
 		// feita com slog na camada HTTP.
-		Logger: gormlogger.Default.LogMode(gormlogger.Warn),
+		Logger: gormlogger.Default.LogMode(gormlogger.Silent),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("abrir conexao com o banco: %w", err)
