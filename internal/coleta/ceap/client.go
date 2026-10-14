@@ -181,7 +181,10 @@ func linhaParaDespesa(campos []string) (deputado.Despesa, bool) {
 }
 
 func atoi(s string) int {
-	n, _ := strconv.Atoi(strings.TrimSpace(s))
+	n, err := strconv.Atoi(strings.TrimSpace(s))
+	if err != nil {
+		return 0
+	}
 	return n
 }
 
