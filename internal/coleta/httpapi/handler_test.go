@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/arturmj10/monitor-gastos-parlamentares/internal/coleta/camara"
+	"github.com/arturmj10/monitor-gastos-parlamentares/internal/coleta/ceap"
 	"github.com/arturmj10/monitor-gastos-parlamentares/internal/coleta/deputado"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -118,4 +119,11 @@ func TestSincronizarDespesas_400SemAno(t *testing.T) {
 	rec := httptest.NewRecorder()
 	h.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/despesas/sync", nil))
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestSincronizarDespesas_502CeapIndisponivel(t *testing.T) {
+	h := novoServer(&servicoFake{err: ceap.ErrIndisponivel})
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, "/despesas/sync?ano=2024", nil))
+	assert.Equal(t, http.StatusBadGateway, rec.Code)
 }

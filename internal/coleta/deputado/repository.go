@@ -14,4 +14,7 @@ type Repository interface {
 	// carga em lote das despesas do CEAP (arquivo anual)
 	LimparDespesasDoAno(ctx context.Context, ano int) error
 	InserirLoteDespesas(ctx context.Context, despesas []Despesa) error
+
+	// executa fn numa transação; se fn retornar erro, nada é gravado
+	EmTransacao(ctx context.Context, fn func(repo Repository) error) error
 }

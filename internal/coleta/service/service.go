@@ -75,22 +75,26 @@ func (s *Service) BuscarDeputado(ctx context.Context, id int64) (deputado.Deputa
 }
 
 // SincronizarDespesas baixa o arquivo do CEAP do ano e o ingere no banco (limpa
-// o ano antes, para ser idempotente). Retorna quantas despesas foram importadas.
+// o ano antes, para ser idempotente). Tudo roda numa transação: se o download
+// ou a inserção falhar no meio, as despesas que já estavam no banco são
+// mantidas. Retorna quantas despesas foram importadas.
 func (s *Service) SincronizarDespesas(ctx context.Context, ano int) (int, error) {
 	if ano <= 0 {
 		return 0, deputado.ErrParametroInvalido
 	}
-	if err := s.repo.LimparDespesasDoAno(ctx, ano); err != nil {
-		return 0, fmt.Errorf("limpar despesas do ano: %w", err)
-	}
 
 	total := 0
-	err := s.ceap.BaixarDespesas(ctx, ano, func(lote []deputado.Despesa) error {
-		if err := s.repo.InserirLoteDespesas(ctx, lote); err != nil {
-			return err
+	err := s.repo.EmTransacao(ctx, func(repo deputado.Repository) error {
+		if err := repo.LimparDespesasDoAno(ctx, ano); err != nil {
+			return fmt.Errorf("limpar despesas do ano: %w", err)
 		}
-		total += len(lote)
-		return nil
+		return s.ceap.BaixarDespesas(ctx, ano, func(lote []deputado.Despesa) error {
+			if err := repo.InserirLoteDespesas(ctx, lote); err != nil {
+				return err
+			}
+			total += len(lote)
+			return nil
+		})
 	})
 	if err != nil {
 		return 0, err

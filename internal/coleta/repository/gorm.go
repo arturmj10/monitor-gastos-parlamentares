@@ -97,6 +97,15 @@ func (r *GormRepository) InserirLoteDespesas(ctx context.Context, despesas []dep
 	return nil
 }
 
+// EmTransacao executa fn numa transação do banco, entregando a ela um
+// repositório ligado à transação. Se fn retornar erro, tudo é desfeito
+// (rollback) e o banco fica como estava.
+func (r *GormRepository) EmTransacao(ctx context.Context, fn func(repo deputado.Repository) error) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		return fn(NovoGorm(tx))
+	})
+}
+
 // ListarDespesas retorna as despesas de um deputado, filtrando por ano se ano > 0.
 func (r *GormRepository) ListarDespesas(ctx context.Context, deputadoID int64, ano int) ([]deputado.Despesa, error) {
 	q := r.db.WithContext(ctx).Where("deputado_id = ?", deputadoID)
