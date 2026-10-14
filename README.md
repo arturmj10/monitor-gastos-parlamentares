@@ -1,8 +1,9 @@
 # Monitor de Gastos Parlamentares
 
-Sistema de microsserviços em Go que consome a API de Dados Abertos da Câmara dos
-Deputados. Este repositório contém o `coleta-service` (Fase 1): consome a API
-externa, persiste em PostgreSQL próprio e expõe uma API REST.
+Sistema de microsserviços em Go que coleta dados abertos da Câmara dos Deputados.
+Este repositório contém o `coleta-service`: consome duas fontes externas — a API
+REST de deputados e o arquivo anual de despesas (CEAP) — persiste em PostgreSQL
+próprio e expõe uma API REST.
 
 ## Requisitos
 
@@ -29,6 +30,25 @@ docker compose up -d postgres
 DATABASE_URL="postgres://coleta:coleta@localhost:5433/coleta?sslmode=disable" go run ./cmd/coleta
 ```
 
+## Fluxo de uso
+
+1. Importar os deputados da API da Câmara:
+   ```bash
+   curl -X POST http://localhost:8080/deputados/sync
+   ```
+2. Importar as despesas de um ano (baixa o arquivo CEAP e ingere no banco):
+   ```bash
+   curl -X POST "http://localhost:8080/despesas/sync?ano=2024"
+   ```
+3. Consultar:
+   ```bash
+   curl "http://localhost:8080/deputados?uf=SP"
+   curl http://localhost:8080/deputados/204379
+   curl "http://localhost:8080/deputados/204379/despesas?ano=2024"
+   ```
+
+As despesas são lidas do banco; o download do CEAP só ocorre no `POST /despesas/sync`.
+
 ## Variáveis de ambiente
 
 | Variável | Padrão | Descrição |
@@ -36,32 +56,21 @@ DATABASE_URL="postgres://coleta:coleta@localhost:5433/coleta?sslmode=disable" go
 | `PORT` | `8080` | Porta HTTP do serviço |
 | `LOG_LEVEL` | `info` | `debug`, `info`, `warn` ou `error` |
 | `DATABASE_URL` | — (obrigatória) | DSN do PostgreSQL |
-| `CAMARA_BASE_URL` | API da Câmara v2 | Base da API externa |
+| `CAMARA_BASE_URL` | API da Câmara v2 | Base da API REST de deputados |
 | `CAMARA_TIMEOUT` | `10s` | Timeout por requisição à Câmara |
+| `CEAP_BASE_URL` | portal de cotas da Câmara | Base dos arquivos de despesas (CEAP) |
+| `CEAP_TIMEOUT` | `120s` | Timeout do download do arquivo CEAP |
 
 ## Endpoints
 
 | Método | Rota | Descrição |
 |--------|------|-----------|
 | `GET` | `/healthz` | Health check |
-| `POST` | `/deputados/sync` | Sincroniza os deputados a partir da API da Câmara |
+| `POST` | `/deputados/sync` | Importa os deputados da API da Câmara |
 | `GET` | `/deputados` | Lista os deputados (filtros `?uf=` e `?partido=`) |
 | `GET` | `/deputados/{id}` | Busca um deputado (busca na API se não estiver no banco) |
-| `GET` | `/deputados/{id}/despesas` | Despesas do deputado (filtro `?ano=`) |
-
-Exemplos:
-
-```bash
-curl -X POST http://localhost:8080/deputados/sync
-```
-
-```bash
-curl "http://localhost:8080/deputados?uf=SP"
-```
-
-```bash
-curl http://localhost:8080/deputados/204379
-```
+| `POST` | `/despesas/sync?ano=` | Importa as despesas do ano a partir do arquivo CEAP |
+| `GET` | `/deputados/{id}/despesas?ano=` | Despesas do deputado (lidas do banco) |
 
 ## Testes
 
@@ -79,5 +88,6 @@ internal/coleta/service     regras de negócio
 internal/coleta/deputado    domínio (modelos, erros, interface do repositório)
 internal/coleta/repository  acesso a dados (GORM/Postgres)
 internal/coleta/storage     conexão com o banco
-internal/coleta/camara      client REST da API da Câmara
+internal/coleta/camara      client REST da API de deputados
+internal/coleta/ceap        download e leitura do arquivo de despesas (CEAP)
 ```
