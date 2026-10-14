@@ -77,31 +77,6 @@ func (r *GormRepository) Buscar(ctx context.Context, id int64) (deputado.Deputad
 	return d, nil
 }
 
-// SalvarDespesas substitui, numa transação, as despesas dos anos presentes no
-// lote para aquele deputado (evita duplicar ao reconsultar a API).
-func (r *GormRepository) SalvarDespesas(ctx context.Context, deputadoID int64, despesas []deputado.Despesa) error {
-	if len(despesas) == 0 {
-		return nil
-	}
-	anos := map[int]struct{}{}
-	for _, d := range despesas {
-		anos[d.Ano] = struct{}{}
-	}
-
-	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		for ano := range anos {
-			if err := tx.Where("deputado_id = ? AND ano = ?", deputadoID, ano).
-				Delete(&deputado.Despesa{}).Error; err != nil {
-				return fmt.Errorf("limpar despesas: %w", err)
-			}
-		}
-		if err := tx.Create(&despesas).Error; err != nil {
-			return fmt.Errorf("inserir despesas: %w", err)
-		}
-		return nil
-	})
-}
-
 // LimparDespesasDoAno remove todas as despesas de um ano (antes de reimportar
 // o arquivo do CEAP), tornando a importação idempotente.
 func (r *GormRepository) LimparDespesasDoAno(ctx context.Context, ano int) error {

@@ -77,21 +77,6 @@ type respDeputado struct {
 	} `json:"dados"`
 }
 
-type respDespesas struct {
-	Dados []struct {
-		Ano               int     `json:"ano"`
-		Mes               int     `json:"mes"`
-		TipoDespesa       string  `json:"tipoDespesa"`
-		DataDocumento     string  `json:"dataDocumento"`
-		ValorLiquido      float64 `json:"valorLiquido"`
-		ValorDocumento    float64 `json:"valorDocumento"`
-		NomeFornecedor    string  `json:"nomeFornecedor"`
-		CNPJCPFFornecedor string  `json:"cnpjCpfFornecedor"`
-		URLDocumento      string  `json:"urlDocumento"`
-	} `json:"dados"`
-	Links []link `json:"links"`
-}
-
 // ListarDeputados busca todos os deputados em exercício, seguindo a paginação.
 func (c *Client) ListarDeputados(ctx context.Context) ([]deputado.Deputado, error) {
 	q := url.Values{
@@ -141,47 +126,6 @@ func (c *Client) BuscarDeputado(ctx context.Context, id int64) (deputado.Deputad
 		Email:   us.Email,
 		URLFoto: us.URLFoto,
 	}, nil
-}
-
-// ListarDespesas busca as despesas da cota parlamentar de um deputado,
-// filtrando por ano quando ano > 0, seguindo a paginação.
-func (c *Client) ListarDespesas(ctx context.Context, id int64, ano int) ([]deputado.Despesa, error) {
-	q := url.Values{
-		"ordem":      {"DESC"},
-		"ordenarPor": {"dataDocumento"},
-		"itens":      {"100"},
-	}
-	if ano > 0 {
-		q.Set("ano", strconv.Itoa(ano))
-	}
-	proxima := c.baseURL + "/deputados/" + strconv.FormatInt(id, 10) + "/despesas?" + q.Encode()
-
-	var despesas []deputado.Despesa
-	for proxima != "" {
-		var resp respDespesas
-		if err := c.get(ctx, proxima, &resp); err != nil {
-			return nil, err
-		}
-		for _, d := range resp.Dados {
-			valor := d.ValorLiquido
-			if valor == 0 {
-				valor = d.ValorDocumento
-			}
-			despesas = append(despesas, deputado.Despesa{
-				DeputadoID:   id,
-				Ano:          d.Ano,
-				Mes:          d.Mes,
-				Tipo:         d.TipoDespesa,
-				Fornecedor:   d.NomeFornecedor,
-				CNPJCPF:      d.CNPJCPFFornecedor,
-				Valor:        valor,
-				Data:         d.DataDocumento,
-				URLDocumento: d.URLDocumento,
-			})
-		}
-		proxima = hrefPorRel(resp.Links, "next")
-	}
-	return despesas, nil
 }
 
 // get faz a requisição GET: aplica timeout via context, define o Accept,

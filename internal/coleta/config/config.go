@@ -14,6 +14,8 @@ type Config struct {
 	DatabaseURL   string
 	CamaraBaseURL string
 	CamaraTimeout time.Duration
+	CeapBaseURL   string
+	CeapTimeout   time.Duration
 }
 
 func Load() (Config, error) {
@@ -39,6 +41,13 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("CAMARA_TIMEOUT invalido: %w", err)
 	}
 	cfg.CamaraTimeout = timeout
+
+	cfg.CeapBaseURL = getenv("CEAP_BASE_URL", "https://www.camara.leg.br/cotas")
+	ceapTimeout, err := time.ParseDuration(getenv("CEAP_TIMEOUT", "120s"))
+	if err != nil {
+		return Config{}, fmt.Errorf("CEAP_TIMEOUT invalido: %w", err)
+	}
+	cfg.CeapTimeout = ceapTimeout
 
 	return cfg, nil
 }

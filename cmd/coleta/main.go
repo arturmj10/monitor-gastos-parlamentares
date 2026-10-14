@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/arturmj10/monitor-gastos-parlamentares/internal/coleta/camara"
+	"github.com/arturmj10/monitor-gastos-parlamentares/internal/coleta/ceap"
 	"github.com/arturmj10/monitor-gastos-parlamentares/internal/coleta/config"
 	"github.com/arturmj10/monitor-gastos-parlamentares/internal/coleta/httpapi"
 	"github.com/arturmj10/monitor-gastos-parlamentares/internal/coleta/repository"
@@ -46,7 +47,8 @@ func main() {
 	logger.Info("banco conectado e migrado")
 
 	camaraClient := camara.NovoClient(cfg.CamaraBaseURL, cfg.CamaraTimeout)
-	svc := service.Novo(camaraClient, repo)
+	ceapClient := ceap.NovoClient(cfg.CeapBaseURL, cfg.CeapTimeout)
+	svc := service.Novo(camaraClient, ceapClient, repo)
 	handler := httpapi.NovoHandler(svc, logger)
 
 	srv := &http.Server{

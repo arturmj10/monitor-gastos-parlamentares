@@ -66,27 +66,6 @@ func TestBuscarDeputado_NaoEncontrado(t *testing.T) {
 	assert.ErrorIs(t, err, deputado.ErrDeputadoNaoEncontrado)
 }
 
-func TestListarDespesas_Sucesso(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(`{
-			"dados":[{"ano":2024,"mes":3,"tipoDespesa":"COMBUSTÍVEIS","dataDocumento":"2024-03-10","valorLiquido":250.50,"valorDocumento":260.00,"nomeFornecedor":"Posto X","cnpjCpfFornecedor":"123","urlDocumento":"http://doc"}],
-			"links":[{"rel":"self","href":"x"}]
-		}`))
-	}))
-	defer srv.Close()
-
-	c := NovoClient(srv.URL, 2*time.Second)
-	despesas, err := c.ListarDespesas(context.Background(), 204379, 2024)
-
-	require.NoError(t, err)
-	require.Len(t, despesas, 1)
-	assert.Equal(t, int64(204379), despesas[0].DeputadoID)
-	assert.Equal(t, 2024, despesas[0].Ano)
-	assert.Equal(t, "COMBUSTÍVEIS", despesas[0].Tipo)
-	assert.Equal(t, 250.50, despesas[0].Valor) // usa valorLiquido
-	assert.Equal(t, "Posto X", despesas[0].Fornecedor)
-}
-
 func TestGet_Status500_Indisponivel(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
