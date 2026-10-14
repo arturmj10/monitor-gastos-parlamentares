@@ -72,6 +72,13 @@ func (m *mockRepo) InserirLoteDespesas(ctx context.Context, despesas []deputado.
 	return m.Called(ctx, despesas).Error(0)
 }
 
+func (m *mockRepo) EmTransacao(ctx context.Context, fn func(repo deputado.Repository) error) error {
+	if err := m.Called(ctx).Error(0); err != nil {
+		return err
+	}
+	return fn(m)
+}
+
 // --- testes ---
 
 func TestSincronizarDeputados(t *testing.T) {
@@ -149,6 +156,7 @@ func TestSincronizarDespesas(t *testing.T) {
 	fonte := new(mockFonte)
 	repo := new(mockRepo)
 
+	repo.On("EmTransacao", ctx).Return(nil)
 	repo.On("LimparDespesasDoAno", ctx, 2024).Return(nil)
 	repo.On("InserirLoteDespesas", ctx, lote).Return(nil)
 	fonte.On("BaixarDespesas", ctx, 2024, mock.Anything).
@@ -163,6 +171,23 @@ func TestSincronizarDespesas(t *testing.T) {
 	assert.Equal(t, 2, n)
 	repo.AssertExpectations(t)
 	fonte.AssertExpectations(t)
+}
+
+func TestSincronizarDespesas_ErroNoDownloadRetornaErro(t *testing.T) {
+	ctx := context.Background()
+	falha := errors.New("arquivo do ceap indisponivel")
+
+	fonte := new(mockFonte)
+	repo := new(mockRepo)
+	repo.On("EmTransacao", ctx).Return(nil)
+	repo.On("LimparDespesasDoAno", ctx, 2024).Return(nil)
+	fonte.On("BaixarDespesas", ctx, 2024, mock.Anything).Return(falha)
+
+	n, err := Novo(new(mockCamara), fonte, repo).SincronizarDespesas(ctx, 2024)
+
+	require.ErrorIs(t, err, falha) // o erro volta pela transação, que desfaz a limpeza
+	assert.Equal(t, 0, n)
+	repo.AssertNotCalled(t, "InserirLoteDespesas", mock.Anything, mock.Anything)
 }
 
 func TestSincronizarDespesas_AnoInvalido(t *testing.T) {
