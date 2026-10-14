@@ -9,7 +9,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func NewRouter(logger *slog.Logger) http.Handler {
+func NewRouter(logger *slog.Logger, h *Handler) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
@@ -18,9 +18,14 @@ func NewRouter(logger *slog.Logger) http.Handler {
 	r.Use(middleware.Timeout(30 * time.Second))
 
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"status":"ok"}`))
+		escreverJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	})
+
+	r.Route("/deputados", func(r chi.Router) {
+		r.Get("/", h.listar)
+		r.Post("/sync", h.sincronizar)
+		r.Get("/{id}", h.buscar)
+		r.Get("/{id}/despesas", h.despesas)
 	})
 
 	return r

@@ -5,23 +5,23 @@ import (
 	"log/slog"
 	"os"
 	"strings"
-
-	"github.com/joho/godotenv"
+	"time"
 )
 
 type Config struct {
-	Port        string
-	LogLevel    string
-	DatabaseURL string
+	Port          string
+	LogLevel      string
+	DatabaseURL   string
+	CamaraBaseURL string
+	CamaraTimeout time.Duration
 }
 
 func Load() (Config, error) {
-	_ = godotenv.Load()
-
 	cfg := Config{
-		Port:        getenv("PORT", "8080"),
-		LogLevel:    getenv("LOG_LEVEL", "info"),
-		DatabaseURL: os.Getenv("DATABASE_URL"),
+		Port:          getenv("PORT", "8080"),
+		LogLevel:      getenv("LOG_LEVEL", "info"),
+		DatabaseURL:   os.Getenv("DATABASE_URL"),
+		CamaraBaseURL: getenv("CAMARA_BASE_URL", "https://dadosabertos.camara.leg.br/api/v2"),
 	}
 
 	switch strings.ToLower(cfg.LogLevel) {
@@ -33,6 +33,12 @@ func Load() (Config, error) {
 	if cfg.DatabaseURL == "" {
 		return Config{}, fmt.Errorf("DATABASE_URL e obrigatoria")
 	}
+
+	timeout, err := time.ParseDuration(getenv("CAMARA_TIMEOUT", "10s"))
+	if err != nil {
+		return Config{}, fmt.Errorf("CAMARA_TIMEOUT invalido: %w", err)
+	}
+	cfg.CamaraTimeout = timeout
 
 	return cfg, nil
 }

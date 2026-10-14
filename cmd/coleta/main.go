@@ -10,9 +10,11 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/arturmj10/monitor-gastos-parlamentares/internal/coleta/camara"
 	"github.com/arturmj10/monitor-gastos-parlamentares/internal/coleta/config"
 	"github.com/arturmj10/monitor-gastos-parlamentares/internal/coleta/httpapi"
 	"github.com/arturmj10/monitor-gastos-parlamentares/internal/coleta/repository"
+	"github.com/arturmj10/monitor-gastos-parlamentares/internal/coleta/service"
 	"github.com/arturmj10/monitor-gastos-parlamentares/internal/coleta/storage"
 )
 
@@ -43,9 +45,13 @@ func main() {
 	}
 	logger.Info("banco conectado e migrado")
 
+	camaraClient := camara.NovoClient(cfg.CamaraBaseURL, cfg.CamaraTimeout)
+	svc := service.Novo(camaraClient, repo)
+	handler := httpapi.NovoHandler(svc, logger)
+
 	srv := &http.Server{
 		Addr:              ":" + cfg.Port,
-		Handler:           httpapi.NewRouter(logger),
+		Handler:           httpapi.NewRouter(logger, handler),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 
